@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="lt">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TravCen - Travel Offers Hub</title>
+  <title>TravCen - Kelionių pasiūlymų centras</title>
+  <!-- Google reCAPTCHA API -->
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   <style>
     body {
       margin: 0;
@@ -14,11 +16,9 @@
     }
 
     .overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       background-color: rgba(255, 255, 255, 0.75);
       z-index: 1;
     }
@@ -39,6 +39,15 @@
       margin-bottom: 1rem;
     }
 
+    .language-selector {
+      margin-bottom: 1rem;
+    }
+
+    .language-selector select {
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+
     .ad-left,
     .ad-right {
       position: fixed;
@@ -48,6 +57,9 @@
       background-color: #ffffffcc;
       border: 1px solid #ccc;
       z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .ad-left {
@@ -56,6 +68,26 @@
 
     .ad-right {
       right: 10px;
+    }
+
+    .ad-carousel {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .ad-carousel img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0; left: 0;
+      opacity: 0;
+      transition: opacity 1s ease-in-out;
+    }
+
+    .ad-carousel img.active {
+      opacity: 1;
     }
 
     @media screen and (max-width: 992px) {
@@ -132,90 +164,936 @@
       vertical-align: middle;
       margin-right: 8px;
     }
+
+    .footer {
+      margin-top: 4rem;
+      padding: 1rem;
+      background-color: rgba(255, 255, 255, 0.85);
+      font-size: 0.9rem;
+      color: #333;
+    }
+
+    .security-section {
+      background-color: rgba(255, 255, 255, 0.95);
+      padding: 2rem;
+      margin-top: 3rem;
+      border-radius: 10px;
+      text-align: left;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .security-section h2 {
+      color: #0066cc;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
   <div class="overlay"></div>
 
-  <div class="ad-left">Ad Left</div>
-  <div class="ad-right">Ad Right</div>
+  <div class="ad-left">
+    <div class="ad-carousel" id="ad-left-carousel">
+      <img src="https://source.unsplash.com/120x600/?travel,1" class="active" alt="Ad 1" />
+      <img src="https://source.unsplash.com/120x600/?travel,2" alt="Ad 2" />
+      <img src="https://source.unsplash.com/120x600/?travel,3" alt="Ad 3" />
+    </div>
+  </div>
+  <div class="ad-right">
+    <div class="ad-carousel" id="ad-right-carousel">
+      <img src="https://source.unsplash.com/120x600/?holiday,1" class="active" alt="Ad 4" />
+      <img src="https://source.unsplash.com/120x600/?holiday,2" alt="Ad 5" />
+      <img src="https://source.unsplash.com/120x600/?holiday,3" alt="Ad 6" />
+    </div>
+  </div>
 
   <div class="container">
-    <header>Welcome to TravCen</header>
-    <p>All travel deals in one place. Discover, compare, and book your next journey.</p>
+    <header>TravCen - Kelionių pasiūlymų centras</header>
 
-    <div class="auth-buttons">
-      <button><img src="https://img.icons8.com/color/20/000000/google-logo.png" alt="Google" /> Sign in with Google</button>
-      <button><img src="https://img.icons8.com/color/20/000000/facebook-new.png" alt="Facebook" /> Sign in with Facebook</button>
-    </div>
-
-    <div class="search-box">
-      <input type="text" id="departure" placeholder="Departure location" oninput="filterCards()" />
-      <input type="text" id="destination" placeholder="Destination" oninput="filterCards()" />
-      <select id="sort" onchange="filterCards()">
-        <option value="">Sort by</option>
-        <option value="price-low">Price: Low to High</option>
-        <option value="price-high">Price: High to Low</option>
-        <option value="rating">Rating</option>
+    <div class="language-selector">
+      <label for="lang">Kalbos pasirinkimas: </label>
+      <select id="lang" name="lang">
+        <option value="lt" selected>Lietuvių</option>
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+        <option value="zh">中文</option>
+        <option value="de">Deutsch</option>
       </select>
     </div>
 
-    <div class="card-list" id="card-list">
-      <div class="card" data-from="Vilnius" data-to="Greece" data-price="299">
-        <img src="https://source.unsplash.com/280x180/?beach" alt="Beach">
-        <div class="card-content">
-          <h3>Sunny Beach Escape</h3>
-          <p>From: Vilnius</p>
-          <p>To: Greece</p>
-          <p>Price: €299</p>
-        </div>
-      </div>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Ieškoti kelionių..." />
+      <button id="searchBtn">Ieškoti</button>
+    </div>
 
-      <div class="card" data-from="Kaunas" data-to="Swiss Alps" data-price="499">
-        <img src="https://source.unsplash.com/280x180/?mountains" alt="Mountains">
-        <div class="card-content">
-          <h3>Mountain Adventure</h3>
-          <p>From: Kaunas</p>
-          <p>To: Swiss Alps</p>
-          <p>Price: €499</p>
-        </div>
-      </div>
+    <div class="card-list" id="cardList">
+      <!-- Kelionių pasiūlymų kortelės bus čia -->
+    </div>
+    <div class="security-section">
+      <h2>Saugumas</h2>
+      <p>Mes užtikriname, kad jūsų duomenys būtų apsaugoti pasitelkiant modernias technologijas:</p>
+      <ul>
+        <li>SSL šifravimas visiems duomenų perdavimams</li>
+        <li>Autentifikacija naudojant „Google“ ir „Facebook“</li>
+        <li>Reguliarūs sistemos saugumo atnaujinimai</li>
+        <li>Privatumo politika ir asmens duomenų apsauga pagal GDPR</li>
+        <li>Vartotojų aktyvumo stebėjimas naudojant Google Analytics</li>
+      </ul>
+      <p>Jūsų pasitikėjimas – mūsų prioritetas.</p>
+    </div>
+  </div>
 
-      <div class="card" data-from="Riga" data-to="Paris" data-price="199">
-        <img src="https://source.unsplash.com/280x180/?city" alt="City">
-        <div class="card-content">
-          <h3>City Break</h3>
-          <p>From: Riga</p>
-          <p>To: Paris</p>
-          <p>Price: €199</p>
-        </div>
-      </div>
+  <div class="footer">
+    &copy; 2025 TravCen. Visos teisės saugomos. | <a href="#" style="color:#0066cc;">Privatumo politika</a> | <a href="#" style="color:#0066cc;">Paslaugų sąlygos</a>
+  </div>
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXX'); // Pakeisk savo Google Analytics ID
+  </script>
+
+  <script>
+    // Kalbų vertimai paprastam pavyzdžiui
+    const translations = {
+      lt: {
+        searchPlaceholder: "Ieškoti kelionių...",
+        securityTitle: "Saugumas",
+        securityText: "Mes užtikriname, kad jūsų duomenys būtų apsaugoti pasitelkiant modernias technologijas:",
+        securityPoints: [
+          "SSL šifravimas visiems duomenų perdavimams",
+          "Autentifikacija naudojant „Google“ ir „Facebook“",
+          "Reguliarūs sistemos saugumo atnaujinimai",
+          "Privatumo politika ir asmens duomenų apsauga pagal GDPR",
+          "Vartotojų aktyvumo stebėjimas naudojant Google Analytics"
+        ],
+        securityTrust: "Jūsų pasitikėjimas – mūsų prioritetas.",
+        headerTitle: "TravCen - Kelionių pasiūlymų centras",
+        privacyPolicy: "Privatumo politika",
+        termsOfService: "Paslaugų sąlygos",
+        languageLabel: "Kalbos pasirinkimas:",
+        searchButton: "Ieškoti"
+      },
+      en: {
+        searchPlaceholder: "Search trips...",
+        securityTitle: "Security",
+        securityText: "We ensure your data is protected using modern technologies:",
+        securityPoints: [
+          "SSL encryption for all data transfers",
+          "Authentication using Google and Facebook",
+          "Regular system security updates",
+          "Privacy policy and GDPR compliance",
+          "User activity tracking via Google Analytics"
+        ],
+        securityTrust: "Your trust is our priority.",
+        headerTitle: "TravCen - Travel Offers Hub",
+        privacyPolicy: "Privacy Policy",
+        termsOfService: "Terms of Service",
+        languageLabel: "Select Language:",
+        searchButton: "Search"
+      },
+      // Pridėk kitų kalbų vertimus analogiškai
+      fr: {
+        searchPlaceholder: "Rechercher des voyages...",
+        securityTitle: "Sécurité",
+        securityText: "Nous assurons la protection de vos données grâce à des technologies modernes :",
+        securityPoints: [
+          "Cryptage SSL pour tous les transferts de données",
+          "Authentification via Google et Facebook",
+          "Mises à jour régulières de la sécurité du système",
+          "Politique de confidentialité et conformité RGPD",
+          "Suivi de l'activité utilisateur via Google Analytics"
+        ],
+        securityTrust: "Votre confiance est notre priorité.",
+        headerTitle: "TravCen - Centre des offres de voyage",
+        privacyPolicy: "Politique de confidentialité",
+        termsOfService: "Conditions d'utilisation",
+        languageLabel: "Choisir la langue:",
+        searchButton: "Rechercher"
+      }
+    };
+
+    // Funkcija atnaujinti tekstus pagal kalbą
+    function updateLanguage(lang) {
+      const t = translations[lang] || translations['lt'];
+      document.querySelector('header').textContent = t.headerTitle;
+      document.getElementById('searchInput').placeholder = t.searchPlaceholder;
+      document.querySelector('.language-selector label').textContent = t.languageLabel;
+      document.getElementById('searchBtn').textContent = t.searchButton;
+      // Saugumo skiltis
+      const secSection = document.querySelector('.security-section');
+      secSection.querySelector('h2').textContent = t.securityTitle;
+      const ul = secSection.querySelector('ul');
+      ul.innerHTML = '';
+      t.securityPoints.forEach(point => {
+        const li = document.createElement('li');
+        li.textContent = point;
+        ul.appendChild(li);
+      });
+      secSection.querySelector('p').textContent = t.securityTrust;
+      // Footer
+      const footer = document.querySelector('.footer');
+      footer.innerHTML = `&copy; 2025 TravCen. Visos teisės saugomos. | <a href="#" style="color:#0066cc;">${t.privacyPolicy}</a> | <a href="#" style="color:#0066cc;">${t.termsOfService}</a>`;
+    }
+
+    document.getElementById('lang').addEventListener('change', (e) => {
+      updateLanguage(e.target.value);
+    });
+
+    // Pradiniu atveju lietuvių kalba
+    updateLanguage('lt');
+
+    // Reklamų karuselės
+    function rotateCarousel(id) {
+      const container = document.getElementById(id);
+      const images = container.getElementsByTagName('img');
+      let index = 0;
+      setInterval(() => {
+        images[index].classList.remove('active');
+        index = (index + 1) % images.length;
+        images[index].classList.add('active');
+      }, 6000); // lėtesnis keitimas 6s
+    }
+
+    rotateCarousel('ad-left-carousel');
+    rotateCarousel('ad-right-carousel');
+
+    // Kelionių pasiūlymų pavyzdžiai
+    const trips = [
+      { title: { lt: "Paryžius", en: "Paris", fr: "Paris" }, desc: { lt: "Romantiškos atostogos Paryžiuje", en: "Romantic holidays in Paris", fr: "Vacances romantiques à Paris" }, img: "https://source.unsplash.com/280x180/?paris" },
+      { title: { lt: "Roma", en: "Rome", fr: "Rome" }, desc: { lt: "Istorinė kelionė į Romą", en: "Historical trip to Rome", fr: "Voyage historique à Rome" }, img: "https://source.unsplash.com/280x180/?rome" },
+      { title: { lt: "Barselona", en: "Barcelona", fr: "Barcelone" }, desc: { lt: "Saulėtos atostogos Barselonoje", en: "Sunny holidays in Barcelona", fr: "Vacances ensoleillées à Barcelone" }, img: "https://source.unsplash.com/280x180/?barcelona" },
+      { title: { lt: "Tokijas", en: "Tokyo", fr: "Tokyo" }, desc: { lt: "Moderni kultūra ir tradicijos", en: "Modern culture and traditions", fr: "Culture moderne et traditions" }, img: "https://source.unsplash.com/280x180/?tokyo" }
+    ];
+
+    function renderTrips(lang) {
+      const container = document.getElementById('cardList');
+      container.innerHTML = '';
+      trips.forEach(trip => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${trip.img}" alt="${trip.title[lang]}" />
+          <div class="card-content">
+            <h3>${trip.title[lang]}</h3>
+            <p>${trip.desc[lang]}</p>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Atvaizduoti pradinius pasiūlymus
+    renderTrips('lt');
+
+    // Atvaizduoti pasiūlymus keičiant kalbą
+    document.getElementById('lang').addEventListener('change', (e) => {
+      const lang = e.target.value;
+      updateLanguage(lang);
+      renderTrips(lang);
+    });
+
+  </script>
+  <script>
+    // Paprasta apsauga nuo spam - „honeypot“ laukas formoje
+    function validateForm() {
+      const honeypot = document.getElementById('website').value;
+      if (honeypot) {
+        alert("Spam detected!");
+        return false;
+      }
+      return true;
+    }
+
+    // Pavyzdinė kontaktinė forma
+    const formHtml = `
+      <form id="contactForm" onsubmit="return validateForm()">
+        <label for="name">Vardas:</label><br/>
+        <input type="text" id="name" name="name" required><br/>
+        <label for="email">El. paštas:</label><br/>
+        <input type="email" id="email" name="email" required><br/>
+        <label for="message">Žinutė:</label><br/>
+        <textarea id="message" name="message" required></textarea><br/>
+        <!-- Honeypot laukas - nematomas vartotojui, bet robotams -->
+        <input type="text" id="website" name="website" style="display:none" />
+        <button type="submit">Siųsti</button>
+      </form>
+    `;
+
+    // Įdedame formą į svetainę
+    const container = document.querySelector('.container');
+    const contactDiv = document.createElement('div');
+    contactDiv.style.marginTop = '3rem';
+    contactDiv.innerHTML = `<h2>Susisiekite su mumis</h2>` + formHtml;
+    container.appendChild(contactDiv);
+
+    // Papildomi paprasti funkcionalumai - pavyzdžiui, formos įvykdymo patvirtinimas
+    document.getElementById('contactForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (validateForm()) {
+        alert('Jūsų žinutė išsiųsta!');
+        this.reset();
+      }
+    });
+
+    // Vartotojo aktyvumo sekimas - pavyzdys
+    // Galima sekti pvz. puslapio lankymą, mygtukų paspaudimus ir pan.
+    // Čia tik pavyzdys, kaip Google Analytics gali fiksuoti įvykius
+
+    function trackEvent(category, action, label) {
+      if (window.gtag) {
+        gtag('event', action, {
+          event_category: category,
+          event_label: label
+        });
+      }
+    }
+
+    // Sekame kalbos pasirinkimą
+    document.getElementById('lang').addEventListener('change', function(e) {
+      trackEvent('Language', 'Change', e.target.value);
+    });
+
+    // Sekame kelionių pasiūlymų kortelės paspaudimus
+    document.getElementById('cardList').addEventListener('click', function(e) {
+      const card = e.target.closest('.card');
+      if (card) {
+        const title = card.querySelector('h3').textContent;
+        trackEvent('Trip', 'Click', title);
+      }
+    });
+
+  </script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TravCen - Kelionių pasiūlymai</title>
+  <style>
+    /* Pagrindinio turinio ir kortelių stiliai */
+    .card-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin: 1rem;
+      width: 280px;
+      overflow: hidden;
+      transition: transform 0.3s;
+      cursor: pointer;
+    }
+
+    .card:hover {
+      transform: scale(1.03);
+    }
+
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+
+    .card-content {
+      padding: 1rem;
+      text-align: left;
+    }
+
+    .card-content h3 {
+      margin: 0 0 0.5rem 0;
+    }
+
+    .card-content p {
+      margin: 0.25rem 0;
+    }
+
+    /* Paieškos laukai */
+    .search-box {
+      margin-top: 2rem;
+      text-align: center;
+    }
+
+    .search-box input, .search-box select {
+      padding: 0.5rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+      width: 200px;
+    }
+
+    .search-box button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Ieškoti kelionės...">
+    <select id="destinationFilter">
+      <option value="">Pasirinkite kelionės tikslą</option>
+      <option value="Paryžius">Paryžius</option>
+      <option value="Roma">Roma</option>
+      <option value="Barselona">Barselona</option>
+      <option value="Tokijas">Tokijas</option>
+      <option value="Berlynas">Berlynas</option>
+    </select>
+    <button id="searchButton">Ieškoti</button>
+  </div>
+
+  <div class="card-list" id="cardList">
+    <!-- Kelionių pasiūlymų kortelės bus čia -->
+  </div>
+
+  <script>
+    const trips = [
+      {
+        title: "Romantiška kelionė į Paryžių",
+        description: "Atraskite meilės miestą – Paryžių, su unikalia architektūra ir gardžia virtuve.",
+        destination: "Paryžius",
+        image: "https://source.unsplash.com/280x180/?paris,city"
+      },
+      {
+        title: "Istorinė Roma",
+        description: "Kelionė į senovinę Romą, kur kiekvienas kampas pasakoja savo istoriją.",
+        destination: "Roma",
+        image: "https://source.unsplash.com/280x180/?rome,ancient"
+      },
+      {
+        title: "Saulėta Barselona",
+        description: "Pasimėgaukite Barselonos paplūdimiais ir Gaudi architektūra.",
+        destination: "Barselona",
+        image: "https://source.unsplash.com/280x180/?barcelona,beach"
+      },
+      {
+        title: "Technologijų centras – Tokijas",
+        description: "Patirkite modernų gyvenimą Tokijuje, kur tradicija susilieja su inovacijomis.",
+        destination: "Tokijas",
+        image: "https://source.unsplash.com/280x180/?tokyo,city"
+      },
+      {
+        title: "Kultūrinis Berlynas",
+        description: "Atraskite Berlyno meną, istoriją ir gyvą kultūrą.",
+        destination: "Berlynas",
+        image: "https://source.unsplash.com/280x180/?berlin,culture"
+      }
+    ];
+
+    // Funkcija rodyti pasiūlymus kortelėmis
+    function displayTrips(tripsToShow) {
+      const cardList = document.getElementById('cardList');
+      cardList.innerHTML = '';
+
+      if (tripsToShow.length === 0) {
+        cardList.innerHTML = '<p>Nėra pasiūlymų pagal jūsų užklausą.</p>';
+        return;
+      }
+
+      tripsToShow.forEach(trip => {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        card.innerHTML = `
+          <img src="${trip.image}" alt="${trip.title}" />
+          <div class="card-content">
+            <h3>${trip.title}</h3>
+            <p>${trip.description}</p>
+            <p><strong>Kelionės tikslas:</strong> ${trip.destination}</p>
+          </div>
+        `;
+
+        cardList.appendChild(card);
+      });
+    }
+
+    // Pirmas rodomas visas sąrašas
+    displayTrips(trips);
+
+    // Paieškos filtras
+    document.getElementById('searchButton').addEventListener('click', () => {
+      const searchText = document.getElementById('searchInput').value.toLowerCase();
+      const destination = document.getElementById('destinationFilter').value;
+
+      const filteredTrips = trips.filter(trip => {
+        const matchesText = trip.title.toLowerCase().includes(searchText) ||
+                            trip.description.toLowerCase().includes(searchText);
+        const matchesDestination = destination ? trip.destination === destination : true;
+        return matchesText && matchesDestination;
+      });
+
+      displayTrips(filteredTrips);
+    });
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TravCen - Kalbų pasirinkimas</title>
+  <style>
+    /* Kalbų pasirinkimo meniu */
+    .language-selector {
+      margin-top: 1rem;
+      text-align: center;
+    }
+    .language-selector select {
+      padding: 0.5rem;
+      font-size: 1rem;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="language-selector">
+    <label for="languageSelect">Pasirinkite kalbą: </label>
+    <select id="languageSelect">
+      <option value="lt">Lietuvių</option>
+      <option value="en">Anglų</option>
+      <option value="fr">Prancūzų</option>
+      <option value="es">Ispanų</option>
+      <option value="zh">Kinų</option>
+      <option value="de">Vokiečių</option>
+    </select>
+  </div>
+
+  <div class="content-text" id="contentText">
+    <h1>Kelionių pasiūlymai</h1>
+    <p>Raskite geriausias keliones patogiai ir greitai.</p>
+  </div>
+
+  <script>
+    // Kalbų vertimai (paprastas objektas)
+    const translations = {
+      lt: {
+        title: "Kelionių pasiūlymai",
+        description: "Raskite geriausias keliones patogiai ir greitai.",
+        searchPlaceholder: "Ieškoti kelionės...",
+        destinationPlaceholder: "Pasirinkite kelionės tikslą",
+        searchButton: "Ieškoti"
+      },
+      en: {
+        title: "Travel Offers",
+        description: "Find the best trips conveniently and quickly.",
+        searchPlaceholder: "Search for trips...",
+        destinationPlaceholder: "Select destination",
+        searchButton: "Search"
+      },
+      fr: {
+        title: "Offres de voyage",
+        description: "Trouvez les meilleurs voyages facilement et rapidement.",
+        searchPlaceholder: "Rechercher un voyage...",
+        destinationPlaceholder: "Sélectionnez la destination",
+        searchButton: "Rechercher"
+      },
+      es: {
+        title: "Ofertas de viaje",
+        description: "Encuentra los mejores viajes de forma cómoda y rápida.",
+        searchPlaceholder: "Buscar viaje...",
+        destinationPlaceholder: "Selecciona destino",
+        searchButton: "Buscar"
+      },
+      zh: {
+        title: "旅游优惠",
+        description: "方便快捷地找到最佳旅行。",
+        searchPlaceholder: "搜索旅行...",
+        destinationPlaceholder: "选择目的地",
+        searchButton: "搜索"
+      },
+      de: {
+        title: "Reiseangebote",
+        description: "Finden Sie bequem und schnell die besten Reisen.",
+        searchPlaceholder: "Reise suchen...",
+        destinationPlaceholder: "Ziel auswählen",
+        searchButton: "Suchen"
+      }
+    };
+
+    // Funkcija atnaujinti svetainės tekstus pagal kalbą
+    function updateLanguage(lang) {
+      const content = translations[lang];
+      if (!content) return;
+
+      document.querySelector('#contentText h1').textContent = content.title;
+      document.querySelector('#contentText p').textContent = content.description;
+      document.getElementById('searchInput').placeholder = content.searchPlaceholder;
+      document.getElementById('destinationFilter').options[0].text = content.destinationPlaceholder;
+      document.getElementById('searchButton').textContent = content.searchButton;
+    }
+
+    // Event listener kalbų pasirinkimui
+    document.getElementById('languageSelect').addEventListener('change', e => {
+      updateLanguage(e.target.value);
+    });
+
+    // Nustatome pradine kalba lietuvių
+    updateLanguage('lt');
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TravCen - Kelionių pasiūlymai</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+      background-size: cover;
+      position: relative;
+      color: #333;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(255, 255, 255, 0.7);
+      z-index: 1;
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      max-width: 1200px;
+      margin: auto;
+      padding: 1rem 2rem;
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 10px;
+      margin-top: 3rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      margin: 0;
+      color: #0066cc;
+    }
+
+    .language-selector {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .language-selector select {
+      padding: 0.5rem;
+      font-size: 1rem;
+      border-radius: 5px;
+    }
+
+    .search-box {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .search-box input,
+    .search-box select,
+    .search-box button {
+      padding: 0.5rem;
+      margin: 0.3rem;
+      font-size: 1rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .card-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .card {
+      background-color: white;
+      width: 280px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+
+    .card:hover {
+      transform: scale(1.03);
+    }
+
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+
+    .card-content {
+      padding: 1rem;
+    }
+
+    .card-content h3 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+      color: #0066cc;
+    }
+
+    .card-content p {
+      margin: 0.25rem 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="overlay"></div>
+
+  <div class="container">
+    <header>
+      <h1 id="pageTitle">Kelionių pasiūlymai</h1>
+    </header>
+
+    <div class="language-selector">
+      <label for="languageSelect">Pasirinkite kalbą: </label>
+      <select id="languageSelect">
+        <option value="lt">Lietuvių</option>
+        <option value="en">Anglų</option>
+        <option value="fr">Prancūzų</option>
+        <option value="es">Ispanų</option>
+        <option value="zh">Kinų</option>
+        <option value="de">Vokiečių</option>
+      </select>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Ieškoti kelionės..." />
+      <select id="destinationFilter">
+        <option>Pasirinkite kelionės tikslą</option>
+        <option>Europa</option>
+        <option>Azija</option>
+        <option>Amerika</option>
+        <option>Afrika</option>
+        <option>Okeanija</option>
+      </select>
+      <button id="searchButton">Ieškoti</button>
+    </div>
+
+    <div class="card-list" id="cardList">
+      <!-- Kelionių kortelės čia bus sugeneruotos JavaScript pagal duomenis -->
     </div>
   </div>
 
   <script>
-    function filterCards() {
-      const from = document.getElementById('departure').value.toLowerCase();
-      const to = document.getElementById('destination').value.toLowerCase();
-      const sort = document.getElementById('sort').value;
+    const translations = {
+      lt: {
+        pageTitle: "Kelionių pasiūlymai",
+        searchPlaceholder: "Ieškoti kelionės...",
+        destinationPlaceholder: "Pasirinkite kelionės tikslą",
+        searchButton: "Ieškoti",
+        noResults: "Rezultatų nėra."
+      },
+      en: {
+        pageTitle: "Travel Offers",
+        searchPlaceholder: "Search for trips...",
+        destinationPlaceholder: "Select destination",
+        searchButton: "Search",
+        noResults: "No results found."
+      },
+      fr: {
+        pageTitle: "Offres de voyage",
+        searchPlaceholder: "Rechercher un voyage...",
+        destinationPlaceholder: "Sélectionnez la destination",
+        searchButton: "Rechercher",
+        noResults: "Aucun résultat."
+      },
+      es: {
+        pageTitle: "Ofertas de viaje",
+        searchPlaceholder: "Buscar viaje...",
+        destinationPlaceholder: "Selecciona destino",
+        searchButton: "Buscar",
+        noResults: "No se encontraron resultados."
+      },
+      zh: {
+        pageTitle: "旅游优惠",
+        searchPlaceholder: "搜索旅行...",
+        destinationPlaceholder: "选择目的地",
+        searchButton: "搜索",
+        noResults: "未找到结果。"
+      },
+      de: {
+        pageTitle: "Reiseangebote",
+        searchPlaceholder: "Reise suchen...",
+        destinationPlaceholder: "Ziel auswählen",
+        searchButton: "Suchen",
+        noResults: "Keine Ergebnisse gefunden."
+      }
+    };
 
-      let cards = Array.from(document.querySelectorAll('.card'));
+    // Paprasti kelionių duomenys (sample)
+    const trips = [
+      {
+        id: 1,
+        title: {
+          lt: "Atostogos Graikijoje",
+          en: "Vacation in Greece",
+          fr: "Vacances en Grèce",
+          es: "Vacaciones en Grecia",
+          zh: "希腊度假",
+          de: "Urlaub in Griechenland"
+        },
+        description: {
+          lt: "7 dienų poilsis prie jūros su pusryčiais.",
+          en: "7-day seaside rest with breakfast.",
+          fr: "7 jours de repos au bord de la mer avec petit déjeuner.",
+          es: "7 días de descanso junto al mar con desayuno.",
+          zh: "7天海边休息，含早餐。",
+          de: "7 Tage Erholung am Meer mit Frühstück."
+        },
+        destination: "Europa",
+        imageUrl: "https://source.unsplash.com/280x180/?greece,sea"
+      },
+      {
+        id: 2,
+        title: {
+          lt: "Egzotinė Tailando kelionė",
+          en: "Exotic Thailand trip",
+          fr: "Voyage exotique en Thaïlande",
+          es: "Viaje exótico a Tailandia",
+          zh: "泰国异国之旅",
+          de: "Exotische Reise nach Thailand"
+        },
+        description: {
+          lt: "10 dienų nuotykis Tailando salose.",
+          en: "10-day adventure on Thailand islands.",
+          fr: "Aventure de 10 jours sur les îles de Thaïlande.",
+          es: "Aventura de 10 días en las islas de Tailandia.",
+          zh: "泰国岛屿10天冒险。",
+          de: "10-tägiges Abenteuer auf den Inseln Thailands."
+        },
+        destination: "Azija",
+        imageUrl: "https://source.unsplash.com/280x180/?thailand,beach"
+      },
+      {
+        id: 3,
+        title: {
+          lt: "Safaris Afrikoje",
+          en: "Safari in Africa",
+          fr: "Safari en Afrique",
+          es: "Safari en África",
+          zh: "非洲狩猎旅行",
+          de: "Safari in Afrika"
+        },
+        description: {
+          lt: "Unikali patirtis laukinėje gamtoje.",
+          en: "Unique experience in the wild.",
+          fr: "Expérience unique dans la nature sauvage.",
+          es: "Experiencia única en la naturaleza salvaje.",
+          zh: "野外独特体验。",
+          de: "Einzigartiges Erlebnis in der Wildnis."
+        },
+        destination: "Afrika",
+        imageUrl: "https://source.unsplash.com/280x180/?africa,safari"
+      }
+    ];
 
-      cards.forEach(card => {
-        const cardFrom = card.getAttribute('data-from').toLowerCase();
-        const cardTo = card.getAttribute('data-to').toLowerCase();
-        card.style.display = cardFrom.includes(from) && cardTo.includes(to) ? 'block' : 'none';
-      });
+    // Funkcija atvaizduoti kelionių korteles
+    function displayTrips(lang, filter = '', destination = '') {
+      const container = document.getElementById('cardList');
+      container.innerHTML = '';
 
-      if (sort === 'price-low') {
-        cards.sort((a, b) => a.getAttribute('data-price') - b.getAttribute('data-price'));
-      } else if (sort === 'price-high') {
-        cards.sort((a, b) => b.getAttribute('data-price') - a.getAttribute('data-price'));
+      let filteredTrips = trips;
+
+      if (filter) {
+        const filterLower = filter.toLowerCase();
+        filteredTrips = filteredTrips.filter(t =>
+          t.title[lang].toLowerCase().includes(filterLower) ||
+          t.description[lang].toLowerCase().includes(filterLower)
+        );
       }
 
-      const list = document.getElementById('card-list');
-      cards.forEach(card => list.appendChild(card));
+      if (destination && destination !== translations[lang].destinationPlaceholder) {
+        filteredTrips = filteredTrips.filter(t => t.destination === destination);
+      }
+
+      if (filteredTrips.length === 0) {
+        container.innerHTML = `<p>${translations[lang].noResults}</p>`;
+        return;
+      }
+
+      filteredTrips.forEach(trip => {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        card.innerHTML = `
+          <img src="${trip.imageUrl}" alt="${trip.title[lang]}" />
+          <div class="card-content">
+            <h3>${trip.title[lang]}</h3>
+            <p>${trip.description[lang]}</p>
+            <p><strong>Regionas:</strong> ${trip.destination}</p>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
     }
+
+    // Atnaujinti kalbą ir svetainės tekstus
+    function updateLanguage(lang) {
+      const content = translations[lang];
+      if (!content) return;
+
+      document.getElementById('pageTitle').textContent = content.pageTitle;
+      document.getElementById('searchInput').placeholder = content.searchPlaceholder;
+      document.getElementById('destinationFilter').options[0].text = content.destinationPlaceholder;
+      document.getElementById('searchButton').textContent = content.searchButton;
+
+      // Atvaizduojame keliones su nauja kalba
+      displayTrips(lang);
+    }
+
+    // Event listener kalbų pasirinkimui
+    document.getElementById('languageSelect').addEventListener('change', e => {
+      const lang = e.target.value;
+      updateLanguage(lang);
+      // Išvalome paieškos lauką ir filtro pasirinkimą
+      document.getElementById('searchInput').value = '';
+      document.getElementById('destinationFilter').selectedIndex = 0;
+    });
+
+    // Event listener paieškos mygtukui
+    document.getElementById('searchButton').addEventListener('click', () => {
+      const lang = document.getElementById('languageSelect').value;
+      const searchTerm = document.getElementById('searchInput').value.trim();
+      const destination = document.getElementById('destinationFilter').value;
+      displayTrips(lang, searchTerm, destination);
+    });
+
+    // Inicializuojame pradinę kalbą ir duomenų atvaizdavimą
+    updateLanguage('lt');
   </script>
 </body>
 </html>
+
+
+
+
